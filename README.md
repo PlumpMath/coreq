@@ -1,5 +1,3 @@
-[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/mitghi/coreq?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
-
 # coreq
 
 [![Join the chat at https://gitter.im/mitghi/coreq](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/mitghi/coreq?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
