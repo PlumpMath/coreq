@@ -1,3 +1,5 @@
+[![Gitter](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/mitghi/coreq?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
 # coreq
 
 Very small HTTP client written in Cython. Both HTTP and HTTPS are supported.
