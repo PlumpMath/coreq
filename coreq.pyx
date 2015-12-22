@@ -117,7 +117,9 @@ cdef class coro:
 			except socket.error: pass
 
 		while True:
-			if not cs: break
+			if not cs:
+				epoll.close()
+				break
 			events = epoll.poll(1)
 			for fileno,event in events:
 				if <int>event == <int>select.EPOLLOUT:
