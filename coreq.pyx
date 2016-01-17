@@ -32,11 +32,13 @@ cdef class _result:
 	cdef public str result
 	cdef public str header
 	cdef public unsigned short short int status
-	cdef public str _raw 
-	def __cinit__(self, str result, unsigned short short int status):
+	cdef public str _raw
+	cdef public object sslinfo
+	def __cinit__(self, str result, unsigned short short int status,sinfo = None):
 		self._raw = result
 		self.result = self.eval(result)		
 		self.status = <unsigned short short int>status
+		self.sslinfo = sinfo
 
 	cpdef eval(self,str result):
 		cdef list body = []
@@ -49,9 +51,10 @@ cdef class _result:
 		return ''
 	
 class Result(Exception):
-	def __init__(self,result, track):
+	def __init__(self,result, track,sslinfo = []):
 		self.result = result
 		self.track = track
+		self.sslinfo = sslinfo
 
 cdef class coro:
 	cdef dict seeds 
@@ -78,6 +81,7 @@ cdef class coro:
 	def _read_sock(self,object sock, str track, bint debug=False):
 		cdef list got = []
 		cdef str res = ""
+		
 		while True:
 			try:
 				res = sock.recv(165535)
@@ -88,6 +92,11 @@ cdef class coro:
 			except ssl.SSLError: pass
 			except Exception: pass
 
+		if hasattr(sock,"cipher"):
+			sinfo = [sock.getpeercert(),sock.cipher()]
+			self._terminate_sock(sock)
+			raise Result(''.join(got),track,sinfo)
+		
 		self._terminate_sock(sock)
 		raise Result(''.join(got),track)
 
@@ -124,11 +133,12 @@ cdef class coro:
 			for fileno,event in events:
 				if <int>event == <int>select.EPOLLOUT:
 					if not isinstance(cs[fileno][0],ssl.SSLSocket) and cs[fileno][1]  == 443:
-						cs[fileno][0] = ssl.wrap_socket(cs[fileno][0],do_handshake_on_connect=False)
+						cs[fileno][0] = ssl.wrap_socket(cs[fileno][0],do_handshake_on_connect=False,ca_certs="/usr/local/lib/python2.7/dist-packages/requests/cacert.pem",cert_reqs=ssl.CERT_REQUIRED)
 					if isinstance(cs[fileno][0],ssl.SSLSocket):
 						while True:
 							try:
 								cs[fileno][0].do_handshake()
+
 								cs[fileno][0].write(self.genhttp_request(track[fileno],cs[fileno][2]))
 								epoll.modify(fileno,read_only)
 								break
@@ -151,7 +161,7 @@ cdef class coro:
 					self._terminate_sock(cs[fileno])
 					yield "failed", track[fileno]
 					del cs[fileno]
-
+					
 
 	cdef str genhttp_request(self, str target,str path):
 		req = [
@@ -184,7 +194,7 @@ cdef class coro:
 					_next = self.stack[item].next()
 				except StopIteration: pass
 				except Result,r:
-					self.results.update({r.track: _result(r.result,0)})
+					self.results.update({r.track: _result(r.result,0,r.sslinfo)})
 
 			if len(self.seeds) == len(self.results): break
 	
