@@ -14,5 +14,4 @@ coreq.coro takes a dictionary and items must have the following format:
       	print e.keys()
       	print e.get("www.python.org").header
       	print e.get("www.python.org").result
-				print e.get("www.python.org").sslinfo # Contains Peer certificate and Cipher 
-info
+        print e.get("www.python.org").sslinfo # Contains Peer certificate and Cipher info
