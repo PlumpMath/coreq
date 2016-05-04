@@ -213,7 +213,7 @@ cdef class coro:
 				try:
 					_next = self.stack[item].next()
 				except StopIteration,e: 
-					print "stopping IO loop", str(e)
+#					print "stopping IO loop", str(e)
 					pass
 				except Result,r:
 					self.results.update({r.track: _result(r.result,0,r.sslinfo)})
