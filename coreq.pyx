@@ -176,10 +176,11 @@ cdef class coro:
 					self._terminate_sock(cs[fileno])
 					yield "failed", track[fileno]
 					del cs[fileno]
-				else:
-#debug
-					print fileno, track[fileno]
-					
+				elif <int>event == <int>select.EPOLLOUT | select.EPOLLHUP:
+					epoll.unregister(fileno)
+					self._terminate_sock(cs[fileno])
+					yield "failed", track[fileno]
+					del cs[fileno]
 					
 
 	cdef str genhttp_request(self, str target,str path):
@@ -212,8 +213,8 @@ cdef class coro:
 				try:
 					_next = self.stack[item].next()
 				except StopIteration,e: 
-					print "stopping IO loop"
-					break
+					print "stopping IO loop", str(e)
+					pass
 				except Result,r:
 					self.results.update({r.track: _result(r.result,0,r.sslinfo)})
 
