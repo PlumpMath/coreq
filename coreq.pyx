@@ -89,8 +89,10 @@ cdef class coro:
 				if not res: break
 				got.append(res)
 				yield
-			except ssl.SSLError: pass
-			except Exception: pass
+			except ssl.SSLError,e:
+				pass
+			except Exception,e:
+				pass
 
 		if hasattr(sock,"cipher"):
 			sinfo = [sock.getpeercert(),sock.cipher()]
@@ -115,6 +117,7 @@ cdef class coro:
 		cdef object epoll = select.epoll()
 		cdef object sock
 		cdef object events
+		cdef unsigned int tries = 0
 
 		for i in input.keys():
 			sock = self._create_sock()
@@ -130,6 +133,17 @@ cdef class coro:
 				epoll.close()
 				break
 			events = epoll.poll(1)
+			if len(events) == 0 :
+				tries += 1
+			else:
+				tries = 0
+			if tries == 4:
+				for no,_ in cs.iteritems():
+					yield "failed", track[no]
+					del cs[no]
+				epoll.close()
+				break
+				
 			for fileno,event in events:
 				if <int>event == <int>select.EPOLLOUT:
 					if not isinstance(cs[fileno][0],ssl.SSLSocket) and cs[fileno][1]  == 443:
@@ -142,7 +156,8 @@ cdef class coro:
 								cs[fileno][0].write(self.genhttp_request(track[fileno],cs[fileno][2]))
 								epoll.modify(fileno,read_only)
 								break
-							except ssl.SSLError: pass
+							except ssl.SSLError,e:
+								pass
 					else:
 						cs[fileno][0].sendall(self.genhttp_request(track[fileno],cs[fileno][2]))
 						epoll.modify(fileno,read_only)
@@ -161,6 +176,10 @@ cdef class coro:
 					self._terminate_sock(cs[fileno])
 					yield "failed", track[fileno]
 					del cs[fileno]
+				else:
+#debug
+					print fileno, track[fileno]
+					
 					
 
 	cdef str genhttp_request(self, str target,str path):
@@ -192,7 +211,9 @@ cdef class coro:
 			for item, _ in enumerate(self.stack):
 				try:
 					_next = self.stack[item].next()
-				except StopIteration: pass
+				except StopIteration,e: 
+					print "stopping IO loop"
+					break
 				except Result,r:
 					self.results.update({r.track: _result(r.result,0,r.sslinfo)})
 
